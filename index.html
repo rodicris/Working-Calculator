@@ -1,113 +1,234 @@
-<!--Creating a calculator using HTML and CSS-->
 <!DOCTYPE html>
-<html lang="eng">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, inital-scale=1.0">
-    <title>calculator</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-    <link rel="icon" href="calculator.png" type="icon">
-
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neon Calc</title>
+  <link rel="icon" href="calculator.png" type="image/png" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body style="background-image: url(goku.gif);">
-    <table>
-        <tr>
-        <td colspan="4"><input type="text" id="result" disabled></td>
-        </tr>
+<body>
+  <div class="app-wrap">
+    <!-- Header -->
+    <header class="app-header">
+      <h1>Neon Calculator</h1>
+      <div class="header-actions">
+        <button class="btn ghost" id="theme-toggle" aria-label="Toggle theme">Toggle theme</button>
+        <button class="btn ghost" id="clear-history" aria-label="Clear history">Clear history</button>
+      </div>
+    </header>
 
-        <tr>
-        <td><input type="button" onclick="clearinput()" value="C"></td>
-        <td><input type="button" onclick="divide()" value="/"></td>
-        <td><input type="button" onclick="multiply()" value="*"></td>
-        <td><input type="button" onclick="deletekita()" value="Del"></td>
-        </tr>
+    <!-- Main content -->
+    <main class="layout">
+      <!-- Calculator -->
+      <section class="calculator" aria-label="Calculator">
+        <input
+          type="text"
+          id="display"
+          class="display"
+          aria-readonly="true"
+          readonly
+          placeholder="0"
+        />
 
-        <tr>
-        <td><input type="button" onclick="appendNumber(7)" value="7"></td>
-        <td><input type="button" onclick="appendNumber(8)" value="8"></td>
-        <td><input type="button" onclick="appendNumber(9)" value="9"></td>
-        <td><input type="button" onclick="minus()" value="-"></td>
-        </tr>
+        <div class="pad">
+          <!-- Row: Control -->
+          <button class="btn danger" data-action="clear">C</button>
+          <button class="btn warning" data-action="delete">Del</button>
+          <button class="btn op" data-value="(">(</button>
+          <button class="btn op" data-value=")">)</button>
 
-        <tr>
-        <td><input type="button" onclick="appendNumber(4)" value="4"></td>
-        <td><input type="button" onclick="appendNumber(5)" value="5"></td>
-        <td><input type="button" onclick="appendNumber(6)" value="6"></td>
-        <td><input type="button" onclick="add()" value="+"></td>
-        </tr>
+          <!-- Row: Operators -->
+          <button class="btn num" data-value="7">7</button>
+          <button class="btn num" data-value="8">8</button>
+          <button class="btn num" data-value="9">9</button>
+          <button class="btn op" data-value="/">/</button>
 
-        <tr>
-        <td><input type="button" onclick="appendNumber(1)" value="1"></td>
-        <td><input type="button" onclick="appendNumber(2)" value="2"></td>
-        <td><input type="button" onclick="appendNumber(3)" value="3"></td>
-        <td><input type="button" onclick="calculate()" value="="></td>
-        </tr>
+          <button class="btn num" data-value="4">4</button>
+          <button class="btn num" data-value="5">5</button>
+          <button class="btn num" data-value="6">6</button>
+          <button class="btn op" data-value="*">*</button>
 
-        <tr>
-        <td><input type="button" onclick="appendNumber(0)" value="0"></td>
-        <td><input type="button" onclick="appendNumber('.')" value="."></td>
-        <td><input type="button" onclick="appendNumber('(')" value="("></td>
-        <td><input type="button" onclick="appendNumber(')')" value=")"></td>
-        </tr>
+          <button class="btn num" data-value="1">1</button>
+          <button class="btn num" data-value="2">2</button>
+          <button class="btn num" data-value="3">3</button>
+          <button class="btn op" data-value="-">-</button>
 
-    </table>
+          <button class="btn num wide" data-value="0">0</button>
+          <button class="btn num" data-value=".">.</button>
+          <button class="btn op" data-value="+">+</button>
+          <button class="btn equal" data-action="equals">=</button>
+        </div>
+      </section>
 
-    <script>
-        let currentInput = "";
-        let currentOperator = "";
+      <!-- History -->
+      <aside class="history" aria-label="Calculation history">
+        <h2>History</h2>
+        <ul id="history-list" class="history-list"></ul>
+      </aside>
+    </main>
+  </div>
 
-        function clearinput() {
-            currentInput = '';
-            currentOperator= '';
-            document.getElementById('result').value = '';
+  <script>
+    // --- State ---
+    let currentInput = "";
+    const displayEl = document.getElementById("display");
+    const historyListEl = document.getElementById("history-list");
+
+    // Persisted history in localStorage
+    const HISTORY_KEY = "neon_calc_history";
+    let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+
+    // --- Renderers ---
+    function renderDisplay(value) {
+      displayEl.value = value || "";
+      displayEl.placeholder = value ? "" : "0";
+    }
+
+    function renderHistory() {
+      historyListEl.innerHTML = "";
+      history.slice().reverse().forEach((entry, idx) => {
+        const li = document.createElement("li");
+        li.className = "history-item";
+        li.innerHTML = `
+          <button class="history-text" title="Reuse expression">${entry.expr} = ${entry.result}</button>
+          <div class="history-actions">
+            <button class="mini" data-action="reuse" data-index="${history.length - 1 - idx}">↺</button>
+            <button class="mini danger" data-action="remove" data-index="${history.length - 1 - idx}">✕</button>
+          </div>
+        `;
+        historyListEl.appendChild(li);
+      });
+    }
+
+    function saveHistory() {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    // --- Actions ---
+    function clearAll() {
+      currentInput = "";
+      renderDisplay(currentInput);
+    }
+
+    function deleteLast() {
+      currentInput = currentInput.slice(0, -1);
+      renderDisplay(currentInput);
+    }
+
+    function appendValue(v) {
+      currentInput += v;
+      renderDisplay(currentInput);
+    }
+
+    function sanitizeExpression(expr) {
+      // Allow digits, operators, parentheses, decimal point, whitespace
+      const safe = expr.replace(/[^0-9+\-*/().\s]/g, "");
+      return safe;
+    }
+
+    function compute() {
+      if (!currentInput.trim()) return;
+
+      const safeExpr = sanitizeExpression(currentInput);
+      try {
+        // Evaluate using Function for clearer error handling than eval
+        // Note: still only suitable for controlled inputs in this app
+        // eslint-disable-next-line no-new-func
+        const result = Function(`return (${safeExpr})`)();
+        if (Number.isFinite(result)) {
+          renderDisplay(String(result));
+          // Save to history
+          history.push({ expr: safeExpr, result: String(result) });
+          saveHistory();
+          renderHistory();
+          currentInput = String(result);
+        } else {
+          renderDisplay("Error");
+          currentInput = "";
         }
+      } catch {
+        renderDisplay("Error");
+        currentInput = "";
+      }
+    }
 
-        function deletekita() { 
-            currentInput = currentInput.slice(0, -1);
-            document.getElementById('result').value = currentInput;
-        }
-        
-        function appendNumber(number) {
-            currentInput += number;
-            document.getElementById('result').value = currentInput;
-        }
+    function clearHistory() {
+      history = [];
+      saveHistory();
+      renderHistory();
+    }
 
-        function add() {
-            currentOperator = '+';
-            currentInput += currentOperator;
-            document.getElementById('result').value = currentInput;
-        }
+    function removeHistoryItem(index) {
+      history.splice(index, 1);
+      saveHistory();
+      renderHistory();
+    }
 
-        function minus() {
-            currentOperator = '-';
-            currentInput += currentOperator;
-            document.getElementById('result').value = currentInput;
-        }
+    function reuseHistoryItem(index) {
+      currentInput = history[index].expr;
+      renderDisplay(currentInput);
+    }
 
-        function multiply() {
-            currentOperator = '*';
-            currentInput += currentOperator;
-            document.getElementById('result').value = currentInput;
-        }
+    // --- Event wiring (buttons) ---
+    document.querySelector(".pad").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
 
-        function divide() {
-            currentOperator = '/';
-            currentInput += currentOperator;
-            document.getElementById('result').value = currentInput;
-        }
+      const action = btn.getAttribute("data-action");
+      const value = btn.getAttribute("data-value");
 
-        function calculate() {
-                const result = eval(currentInput);
-                console.log(result);
-                currentInput = '';
-                document.getElementById('result').value = result;
-                currentInput += result;
-                currentInput.toString();
-                
-            }
-    </script>
+      if (action === "clear") return clearAll();
+      if (action === "delete") return deleteLast();
+      if (action === "equals") return compute();
+      if (value) return appendValue(value);
+    });
 
+    // History actions
+    historyListEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const idx = Number(btn.getAttribute("data-index"));
+      const action = btn.getAttribute("data-action");
+      if (action === "reuse") return reuseHistoryItem(idx);
+      if (action === "remove") return removeHistoryItem(idx);
+    });
 
+    // Header buttons
+    document.getElementById("clear-history").addEventListener("click", clearHistory);
+
+    // Theme toggle
+    const themeToggleBtn = document.getElementById("theme-toggle");
+    themeToggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("light");
+    });
+
+    // --- Keyboard support ---
+    window.addEventListener("keydown", (e) => {
+      const k = e.key;
+      // Allow numbers and operators
+      if (/[0-9+\-*/().]/.test(k)) {
+        appendValue(k);
+        return;
+      }
+      if (k === "Enter" || k === "=") {
+        e.preventDefault();
+        compute();
+        return;
+      }
+      if (k === "Backspace") {
+        deleteLast();
+        return;
+      }
+      if (k.toLowerCase() === "c") {
+        clearAll();
+        return;
+      }
+    });
+
+    // --- Init ---
+    renderDisplay(currentInput);
+    renderHistory();
+  </script>
 </body>
 </html>
